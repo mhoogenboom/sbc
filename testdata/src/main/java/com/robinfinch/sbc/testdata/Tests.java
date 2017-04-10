@@ -1,6 +1,7 @@
 package com.robinfinch.sbc.testdata;
 
 import com.robinfinch.sbc.core.Hash;
+import com.robinfinch.sbc.core.ledger.Block;
 import com.robinfinch.sbc.core.ledger.Transaction;
 import com.robinfinch.sbc.p2p.config.UniqueAsset;
 import com.robinfinch.sbc.p2p.config.ValueAsset;
@@ -57,6 +58,34 @@ public class Tests {
                 .build();
     }
 
+    public static final Hash B1_HASH = new Hash(new byte[]{0, -113, -96, 94, 107, -81, -72, 62, -47, -71, 122, -91,
+            -4, -29, -83, -35, 33, 82, -119, -19, 3, -113, 106, -92, 11, -108, 120, -103, 114, -46, -71, -96});
+
+    public Block createBlock1(Transaction t1, Transaction t3) throws Exception {
+
+        return new Block.Builder()
+                .withUserId("dave")
+                .withTimestamp(5L)
+                .withProofOfWork("318")
+                .withTransaction(t1)
+                .withTransaction(t3)
+                .build();
+    }
+
+    public static final Hash B2_HASH = new Hash(new byte[]{0, 103, -11, 36, -9, -52, -6, 115, 49, -125, 108, -57, 25,
+            44, -30, -120, 64, -59, -127, 95, 80, 37, -128, 29, -52, 45, -47, 121, 120, -114, 47, -24});
+
+    public Block createBlock2(Transaction t2, Transaction t4) throws Exception {
+
+        return new Block.Builder()
+                .withUserId("chris")
+                .withTimestamp(6L)
+                .withProofOfWork("68")
+                .withTransaction(t2)
+                .withTransaction(t4)
+                .build();
+    }
+
     public static final Hash T5_HASH = new Hash(new byte[]{-91, -16, 6, -78, 10, 30, -120, -99, -94, 10, 53, -94, 46,
             -87, 76, 92, -5, -65, -31, -70, -112, -83, -58, 19, 95, 82, -77, 3, -112, -35, -64, 122});
 
@@ -104,6 +133,22 @@ public class Tests {
                 .withTo("chris")
                 .withAsset(new ValueAsset(1, 0))
                 .withTimestamp(9L)
+                .build();
+    }
+
+    public static final Hash B3_HASH = new Hash(new byte[]{0, -56, 95, 14, 9, 123, 119, -46, -92, -63, 36, -102, 107,
+            -45, -9, -126, -92, 64, 57, -91, 64, -39, -103, -11, 34, 108, 53, -11, 110, -111, 27, -121});
+
+    public Block createBlock3(Transaction t5, Transaction t6, Transaction t7) throws Exception {
+
+        return new Block.Builder()
+                .withPreviousHash(B2_HASH)
+                .withUserId("chris")
+                .withTimestamp(10L)
+                .withProofOfWork("40")
+                .withTransaction(t5)
+                .withTransaction(t6)
+                .withTransaction(t7)
                 .build();
     }
 
@@ -155,6 +200,22 @@ public class Tests {
                 .withTo("chris")
                 .withAsset(new ValueAsset(1, 0))
                 .withTimestamp(13L)
+                .build();
+    }
+
+    public static final Hash B4_HASH = new Hash(new byte[]{0, -7, -29, 86, -77, 64, 23, -91, -62, 18, 26, -36, -84,
+            -86, -68, 1, -4, -83, 122, 15, -126, -8, 44, -89, 121, -41, -123, -28, 76, -20, 50, 55});
+
+    public Block createBlock4(Transaction t8, Transaction t9, Transaction t10) throws Exception {
+
+        return new Block.Builder()
+                .withPreviousHash(B3_HASH)
+                .withUserId("chris")
+                .withTimestamp(14L)
+                .withProofOfWork("429")
+                .withTransaction(t8)
+                .withTransaction(t9)
+                .withTransaction(t10)
                 .build();
     }
 
@@ -258,6 +319,39 @@ public class Tests {
                 .build();
     }
 
+    public static final Hash B5_HASH = new Hash(new byte[]{0, 45, -5, -117, 91, -52, 3, -89, 63, -117, -82, 12, 84,
+            108, -39, -67, 16, 67, -126, 111, -20, -44, -40, -14, 17, 110, -69, 92, -1, 78, -65, 101});
+
+    public Block createBlock5(Transaction t11, Transaction t13, Transaction t15, Transaction t16) throws Exception {
+
+        return new Block.Builder()
+                .withPreviousHash(B4_HASH)
+                .withUserId("dave")
+                .withTimestamp(21L)
+                .withProofOfWork("616")
+                .withTransaction(t11)
+                .withTransaction(t13)
+                .withTransaction(t15)
+                .withTransaction(t16)
+                .build();
+    }
+
+    public static final Hash B6_HASH = new Hash(new byte[]{0, -103, 8, -12, 119, 62, -107, 55, 82, 34, 112, 73, 56, 72,
+            -68, 109, 52, 86, -61, -96, -32, -82, -67, -50, -97, -119, -114, -3, 78, -75, -92, -75});
+
+    public Block createBlock6(Transaction t12, Transaction t13, Transaction t14) throws Exception {
+
+        return new Block.Builder()
+                .withPreviousHash(B4_HASH)
+                .withUserId("chris")
+                .withTimestamp(22L)
+                .withProofOfWork("64")
+                .withTransaction(t12)
+                .withTransaction(t13)
+                .withTransaction(t14)
+                .build();
+    }
+
     public static final byte[] T17_SIGNATURE = {93, -93, 50, -41, -109, 78, 114, 65, 35, 85, 65, -78, 115, -6, -26, 26,
             -4, 118, 36, -1, -83, 52, 8, -20, 63, 123, 43, -57, 115, 14, -118, 34, 79, 40, -73, 74, 19, 63, -3, -8, 68,
             30, -94, -5, 42, 111, 14, 26, 44, 47, -31, -24, -95, -11, -81, -29, -120, 10, 33, -19, -13, -68, -91, -16,
@@ -293,6 +387,22 @@ public class Tests {
                 .withTo("dave")
                 .withAsset(new ValueAsset(2, 0))
                 .withTimestamp(24L)
+                .build();
+    }
+
+    public static final Hash B7_HASH = new Hash(new byte[]{0, 96, 100, -33, 112, 69, -7, 113, 58, -56, -34, -70, -96,
+            81, -114, -18, 56, 114, 42, -115, 29, 37, 74, -16, -47, -50, -103, -5, -119, -65, 84, 80});
+
+    public Block createBlock7(Transaction t15, Transaction t17, Transaction t18) throws Exception {
+
+        return new Block.Builder()
+                .withPreviousHash(B6_HASH)
+                .withUserId("dave")
+                .withTimestamp(25L)
+                .withProofOfWork("190")
+                .withTransaction(t15)
+                .withTransaction(t17)
+                .withTransaction(t18)
                 .build();
     }
 
