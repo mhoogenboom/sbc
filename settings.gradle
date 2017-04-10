@@ -1,0 +1,3 @@
+include 'core'
+include 'p2p'
+include 'testdata'
