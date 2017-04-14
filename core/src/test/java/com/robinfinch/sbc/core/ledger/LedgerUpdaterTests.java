@@ -1,6 +1,10 @@
 package com.robinfinch.sbc.core.ledger;
 
+import com.robinfinch.sbc.core.network.IncentivePolicy;
 import com.robinfinch.sbc.core.network.Network;
+import com.robinfinch.sbc.p2p.config.LimitedValuePolicy;
+import com.robinfinch.sbc.p2p.config.ValueAsset;
+import com.robinfinch.sbc.p2p.config.ValueAssetFactory;
 import com.robinfinch.sbc.testdata.Tests;
 import org.junit.Before;
 import org.junit.Test;
@@ -22,6 +26,13 @@ public class LedgerUpdaterTests extends Tests {
         MockitoAnnotations.initMocks(this);
 
         updater = new LedgerUpdater(network, true);
+
+        AssetFactory assetFactory = new ValueAssetFactory();
+
+        IncentivePolicy policy = new LimitedValuePolicy(1, 1, 8, assetFactory);
+
+        when(network.getIncentivePolicy()).thenReturn(policy);
+
     }
 
     @Test
@@ -215,5 +226,61 @@ public class LedgerUpdaterTests extends Tests {
         assertEquals(b4, updatedLedger.getEndOfChain());
         assertEquals(b3, updatedLedger.withoutNewestBlocks(1).getEndOfChain());
         assertEquals(b2, updatedLedger.withoutNewestBlocks(2).getEndOfChain());
+    }
+
+    @Test
+    public void addInvalidBlock() throws Exception {
+
+        Ledger ledger = new EmptyLedger();
+
+        Transaction feesTransaction = new Transaction.Builder()
+                .withTo("chris")
+                .withAsset(new ValueAsset(2, 0))
+                .withTimestamp(1L)
+                .build();
+
+        // no block
+        Block block = null;
+
+        assertEquals(ledger, updater.update(ledger, block));
+
+        // empty block
+        block = new Block.Builder()
+                .withUserId("chris")
+                .withTimestamp(2L)
+                .withProofOfWork("My work")
+                .build();
+
+        assertEquals(ledger, updater.update(ledger, block));
+
+        // block without user id
+        block = new Block.Builder()
+                .withTimestamp(2L)
+                .withProofOfWork("My work")
+                .withTransaction(createTransaction1())
+                .withTransaction(feesTransaction)
+                .build();
+
+        assertEquals(ledger, updater.update(ledger, block));
+
+        // block without timestamp
+        block = new Block.Builder()
+                .withUserId("chris")
+                .withProofOfWork("My work")
+                .withTransaction(createTransaction1())
+                .withTransaction(feesTransaction)
+                .build();
+
+        assertEquals(ledger, updater.update(ledger, block));
+
+        // block without proof-of-work
+        block = new Block.Builder()
+                .withUserId("chris")
+                .withTimestamp(2L)
+                .withTransaction(createTransaction1())
+                .withTransaction(feesTransaction)
+                .build();
+
+        assertEquals(ledger, updater.update(ledger, block));
     }
 }

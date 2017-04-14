@@ -66,7 +66,53 @@ public class LedgerUpdater {
             return false;
         }
 
-        return true; // todo
+        if (isEmpty(block.getUserId())
+                || (block.getTimestamp() <= 0L)
+                || isEmpty(block.getProofOfWork())) {
+            // compulsory values empty
+            return false;
+        }
+
+        if (verifyTransactions) {
+            IncentivePolicy policy = network.getIncentivePolicy();
+
+            int firstIndex = 0;
+            int lastIndex = block.getTransactions().size() - 1;
+
+            List<Transaction> transactions;
+
+            if (policy.canIntroduceValue(ledger.size())) {
+                Transaction introductionTransaction = block.getTransactions().get(firstIndex);
+                if (!policy.verifyIntroductionTransaction(block.getUserId(), introductionTransaction)) {
+                    return false;
+                }
+
+                transactions = block.getTransactions().subList(firstIndex + 1, lastIndex);
+            } else {
+                transactions = block.getTransactions().subList(firstIndex, lastIndex);
+            }
+
+            Block.Builder blockBuilder = new Block.Builder();
+            for (Transaction transaction : transactions) {
+                if (verify(ledger.append(blockBuilder.build()), transaction, policy)) {
+                    blockBuilder.withTransaction(transaction);
+                } else {
+                    // invalid transaction
+                    return false;
+                }
+            }
+
+            if (policy.canChargeFees()) {
+                int fees = block.getTransactions().stream().mapToInt(Transaction::getFee).sum();
+
+                Transaction feeTransaction = block.getTransactions().get(lastIndex);
+                if (!policy.verifyFeeTransaction(block.getUserId(), fees, feeTransaction)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     public boolean verify(Ledger ledger, Transaction transaction, IncentivePolicy policy) {
@@ -77,5 +123,9 @@ public class LedgerUpdater {
         }
 
         return true; // todo
+    }
+
+    private boolean isEmpty(String s) {
+        return (s == null) || s.trim().isEmpty();
     }
 }
