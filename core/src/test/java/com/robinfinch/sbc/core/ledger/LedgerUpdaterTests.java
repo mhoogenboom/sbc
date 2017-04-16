@@ -33,6 +33,11 @@ public class LedgerUpdaterTests extends Tests {
 
         when(network.getIncentivePolicy()).thenReturn(policy);
 
+        when(network.getAssetFactory()).thenReturn(assetFactory);
+
+        when(network.requestIdentity("bob")).thenReturn(createBob().getIdentity());
+
+        when(network.requestIdentity("chris")).thenReturn(createChris().getIdentity());
     }
 
     @Test
@@ -277,6 +282,94 @@ public class LedgerUpdaterTests extends Tests {
         block = new Block.Builder()
                 .withUserId("chris")
                 .withTimestamp(2L)
+                .withTransaction(createTransaction1())
+                .withTransaction(feesTransaction)
+                .build();
+
+        assertEquals(ledger, updater.update(ledger, block));
+    }
+
+    @Test
+    public void addBlockWithIncorrectFees() throws Exception {
+
+        Ledger ledger = new EmptyLedger();
+
+        Transaction feesTransaction = new Transaction.Builder()
+                .withFrom("alice")
+                .withTo("chris")
+                .withAsset(new ValueAsset(2, 0))
+                .withTimestamp(1L)
+                .build();
+
+        Block block = new Block.Builder()
+                .withUserId("chris")
+                .withTimestamp(2L)
+                .withProofOfWork("My work")
+                .withTransaction(createTransaction1())
+                .withTransaction(feesTransaction)
+                .build();
+
+        assertEquals(ledger, updater.update(ledger, block));
+
+        feesTransaction = new Transaction.Builder()
+                .withTo("bob")
+                .withAsset(new ValueAsset(2, 0))
+                .withTimestamp(1L)
+                .build();
+
+        block = new Block.Builder()
+                .withUserId("chris")
+                .withTimestamp(2L)
+                .withProofOfWork("My work")
+                .withTransaction(createTransaction1())
+                .withTransaction(feesTransaction)
+                .build();
+
+        assertEquals(ledger, updater.update(ledger, block));
+
+        feesTransaction = new Transaction.Builder()
+                .withTo("chris")
+                .withAsset(new ValueAsset(3, 0))
+                .withTimestamp(1L)
+                .build();
+
+        block = new Block.Builder()
+                .withUserId("chris")
+                .withTimestamp(2L)
+                .withProofOfWork("My work")
+                .withTransaction(createTransaction1())
+                .withTransaction(feesTransaction)
+                .build();
+
+        assertEquals(ledger, updater.update(ledger, block));
+
+        feesTransaction = new Transaction.Builder()
+                .withTo("chris")
+                .withAsset(new ValueAsset(2, 3))
+                .withTimestamp(1L)
+                .build();
+
+        block = new Block.Builder()
+                .withUserId("chris")
+                .withTimestamp(2L)
+                .withProofOfWork("My work")
+                .withTransaction(createTransaction1())
+                .withTransaction(feesTransaction)
+                .build();
+
+        assertEquals(ledger, updater.update(ledger, block));
+
+        feesTransaction = new Transaction.Builder()
+                .withTo("chris")
+                .withAsset(new ValueAsset(2, 0))
+                .withFee(3)
+                .withTimestamp(1L)
+                .build();
+
+        block = new Block.Builder()
+                .withUserId("chris")
+                .withTimestamp(2L)
+                .withProofOfWork("My work")
                 .withTransaction(createTransaction1())
                 .withTransaction(feesTransaction)
                 .build();

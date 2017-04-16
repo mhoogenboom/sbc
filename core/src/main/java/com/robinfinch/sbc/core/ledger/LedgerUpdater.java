@@ -2,11 +2,13 @@ package com.robinfinch.sbc.core.ledger;
 
 import com.robinfinch.sbc.core.ConfigurationException;
 import com.robinfinch.sbc.core.Hash;
+import com.robinfinch.sbc.core.identity.Identity;
 import com.robinfinch.sbc.core.network.IncentivePolicy;
 import com.robinfinch.sbc.core.network.Network;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class LedgerUpdater {
 
@@ -122,7 +124,58 @@ public class LedgerUpdater {
             return false;
         }
 
-        return true; // todo
+        if (isEmpty(transaction.getFrom())
+                || isEmpty(transaction.getTo())
+                || !transaction.getAsset().isValid()
+                || !policy.verifyFee(transaction.getFee())
+                || (transaction.getTimestamp() <= 0L)) {
+            // compulsory values empty
+            return false;
+        }
+
+        if (transaction.getFrom().equals(transaction.getTo())) {
+            // transaction to self
+            return false;
+        }
+
+        Identity from = network.requestIdentity(transaction.getFrom());
+
+        if ((from == null) || !from.hasSigned(transaction)) {
+            // sender hasn't signed transaction
+            return false;
+        }
+
+        Asset sourceAsset = network.getAssetFactory().createAsset();
+
+        for (Hash source : transaction.getSources()) {
+            Optional<Transaction> optionalSourceTransaction = ledger.findWithHash(source);
+
+            if (optionalSourceTransaction.isPresent()) {
+                Transaction sourceTransaction = optionalSourceTransaction.get();
+
+                if (sourceTransaction.hasValueFor(from.getUserId())) {
+                    sourceAsset = sourceAsset.plus(from.getUserId(), sourceTransaction);
+                } else {
+                    // sender doesn't own source transaction
+                    return false;
+                }
+
+                if (!ledger.findSpend(from.getUserId(), transaction.getHash()).isEmpty()) {
+                    // sender has already spent source transaction
+                    return false;
+                }
+            } else {
+                // source transaction not in ledger
+                return false;
+            }
+        }
+
+        if (!sourceAsset.covers(transaction.getAsset(), transaction.getFee())) {
+            // source transactions don't cover the transaction
+            return false;
+        }
+
+        return true;
     }
 
     private boolean isEmpty(String s) {
