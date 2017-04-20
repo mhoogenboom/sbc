@@ -5,6 +5,7 @@ import com.robinfinch.sbc.core.Hash;
 import com.robinfinch.sbc.core.identity.Identity;
 import com.robinfinch.sbc.core.network.IncentivePolicy;
 import com.robinfinch.sbc.core.network.Network;
+import com.robinfinch.sbc.core.worker.Worker;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,10 +14,12 @@ import java.util.Optional;
 public class LedgerUpdater {
 
     private final Network network;
+    private final Worker worker;
     private final boolean verifyTransactions;
 
     public LedgerUpdater(Network network, boolean verifyTransactions) {
         this.network = network;
+        this.worker = new Worker();
         this.verifyTransactions = verifyTransactions;
     }
 
@@ -112,6 +115,11 @@ public class LedgerUpdater {
                     return false;
                 }
             }
+        }
+
+        if (!worker.check(block)) {
+            // proof of work not valid
+            return false;
         }
 
         return true;

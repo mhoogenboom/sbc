@@ -7,10 +7,13 @@ import com.robinfinch.sbc.core.identity.UserStore;
 import com.robinfinch.sbc.core.ledger.*;
 import com.robinfinch.sbc.core.network.IncentivePolicy;
 import com.robinfinch.sbc.core.network.Network;
+import com.robinfinch.sbc.core.worker.Worker;
 
 public class AggregatorClient extends Client {
 
     private final int minimumFees;
+
+    private final Worker worker;
 
     private Block.Builder blockBuilder;
     private int totalFees;
@@ -20,6 +23,8 @@ public class AggregatorClient extends Client {
         super(userStore, ledgerStore, new LedgerUpdater(network, true), network);
 
         this.minimumFees = minimumFees;
+
+        this.worker = new Worker();
 
         blockBuilder = new Block.Builder();
         totalFees = 0;
@@ -112,7 +117,7 @@ public class AggregatorClient extends Client {
 
         blockBuilder.withTimestamp(network.getTime());
 
-        Block block = blockBuilder.withProofOfWork("190").build();
+        Block block = worker.seal(blockBuilder);
 
         network.publish(block);
 
