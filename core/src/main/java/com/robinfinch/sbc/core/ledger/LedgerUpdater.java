@@ -86,7 +86,7 @@ public class LedgerUpdater {
 
             List<Transaction> transactions;
 
-            if (policy.canIntroduceValue(ledger.size())) {
+            if (policy.canIntroduceAsset(ledger.size())) {
                 Transaction introductionTransaction = block.getTransactions().get(firstIndex);
                 if (!policy.verifyIntroductionTransaction(block.getUserId(), introductionTransaction)) {
                     return false;
