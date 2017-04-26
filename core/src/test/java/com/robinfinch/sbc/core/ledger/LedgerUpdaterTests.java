@@ -29,7 +29,7 @@ public class LedgerUpdaterTests extends Tests {
 
         AssetFactory assetFactory = new ValueAssetFactory();
 
-        IncentivePolicy policy = new LimitedValuePolicy(1, 1, 8, assetFactory);
+        IncentivePolicy policy = new LimitedValuePolicy(1, 8, assetFactory);
 
         when(network.getIncentivePolicy()).thenReturn(policy);
 

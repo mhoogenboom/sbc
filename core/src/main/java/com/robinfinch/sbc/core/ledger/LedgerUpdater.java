@@ -153,34 +153,38 @@ public class LedgerUpdater {
             return false;
         }
 
-        Asset sourceAsset = network.getAssetFactory().createAsset();
+        if (network.getAssetFactory().allowsAssetIntroduction() && transaction.getSources().isEmpty()) {
+            // asset introduction
+        } else {
+            Asset sourceAsset = network.getAssetFactory().createAsset();
 
-        for (Hash source : transaction.getSources()) {
-            Optional<Transaction> optionalSourceTransaction = ledger.findWithHash(source);
+            for (Hash source : transaction.getSources()) {
+                Optional<Transaction> optionalSourceTransaction = ledger.findWithHash(source);
 
-            if (optionalSourceTransaction.isPresent()) {
-                Transaction sourceTransaction = optionalSourceTransaction.get();
+                if (optionalSourceTransaction.isPresent()) {
+                    Transaction sourceTransaction = optionalSourceTransaction.get();
 
-                if (sourceTransaction.hasValueFor(from.getUserId())) {
-                    sourceAsset = sourceAsset.plus(from.getUserId(), sourceTransaction);
+                    if (sourceTransaction.hasValueFor(from.getUserId())) {
+                        sourceAsset = sourceAsset.plus(from.getUserId(), sourceTransaction);
+                    } else {
+                        // sender doesn't own source transaction
+                        return false;
+                    }
+
+                    if (!ledger.findSpend(from.getUserId(), transaction.getHash()).isEmpty()) {
+                        // sender has already spent source transaction
+                        return false;
+                    }
                 } else {
-                    // sender doesn't own source transaction
+                    // source transaction not in ledger
                     return false;
                 }
+            }
 
-                if (!ledger.findSpend(from.getUserId(), transaction.getHash()).isEmpty()) {
-                    // sender has already spent source transaction
-                    return false;
-                }
-            } else {
-                // source transaction not in ledger
+            if (!sourceAsset.covers(transaction.getAsset(), transaction.getFee())) {
+                // source transactions don't cover the transaction
                 return false;
             }
-        }
-
-        if (!sourceAsset.covers(transaction.getAsset(), transaction.getFee())) {
-            // source transactions don't cover the transaction
-            return false;
         }
 
         return true;

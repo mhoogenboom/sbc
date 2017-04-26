@@ -56,13 +56,15 @@ public abstract class Client implements Node {
 
     public abstract void stop();
 
-    public synchronized boolean introduce(String to, String id, String reference, int confirmationLevel)
+    public synchronized boolean introduce(String id, String reference, int confirmationLevel)
             throws ConfigurationException {
 
         if (network.getAssetFactory().allowsAssetIntroduction()) {
+            User user = userStore.load();
+
             Asset requiredAsset = network.getAssetFactory().createAssetForId(id);
 
-            return transfer(TransferType.NO_SOURCE, to, requiredAsset, reference, 0, confirmationLevel);
+            return transfer(TransferType.NO_SOURCE, null, user.getId(), requiredAsset, reference, 0, confirmationLevel);
         } else {
             return false;
         }
@@ -71,34 +73,36 @@ public abstract class Client implements Node {
     public synchronized boolean transfer(String to, String id, String reference, int confirmationLevel)
             throws ConfigurationException {
 
+        User user = userStore.load();
+
         Asset requiredAsset = network.getAssetFactory().createAssetForId(id);
 
-        return transfer(TransferType.SINGLE_SOURCE, to, requiredAsset, reference, 0, confirmationLevel);
+        return transfer(TransferType.SINGLE_SOURCE, user.getId(), to, requiredAsset, reference, 0, confirmationLevel);
     }
 
     public synchronized boolean transfer(String to, int value, String reference, int fee, int confirmationLevel)
             throws ConfigurationException {
 
+        User user = userStore.load();
+
         Asset requiredAsset = network.getAssetFactory().createAssetForValue(value);
 
-        return transfer(TransferType.MULTIPLE_SOURCES, to, requiredAsset, reference, fee, confirmationLevel);
+        return transfer(TransferType.MULTIPLE_SOURCES, user.getId(), to, requiredAsset, reference, fee, confirmationLevel);
     }
 
-    private boolean transfer(TransferType transferType, String to, Asset requiredAsset, String reference, int fee, int confirmationLevel)
+    private boolean transfer(TransferType transferType, String from, String to, Asset requiredAsset, String reference, int fee, int confirmationLevel)
             throws ConfigurationException {
-
-        User user = userStore.load();
 
         Ledger ledger = ledgerStore.load().withoutNewestBlocks(confirmationLevel);
 
         Transaction.Builder builder = new Transaction.Builder()
-                .withFrom(user.getId())
+                .withFrom(from)
                 .withTo(to);
 
         if (transferType == TransferType.NO_SOURCE) {
             // asset introduction
         } else {
-            List<Transaction> transactions = ledger.findUnspent(user.getId());
+            List<Transaction> transactions = ledger.findUnspent(from);
 
             Asset asset = network.getAssetFactory().createAsset();
 
@@ -116,7 +120,7 @@ public abstract class Client implements Node {
                 for (Transaction transaction : transactions) {
                     builder.withSource(transaction.getHash());
 
-                    asset = asset.plus(user.getId(), transaction);
+                    asset = asset.plus(from, transaction);
 
                     if (asset.covers(requiredAsset, fee)) {
                         break;
@@ -138,6 +142,8 @@ public abstract class Client implements Node {
                 .withFee(fee)
                 .withTimestamp(network.getTime())
                 .build();
+
+        User user = userStore.load();
 
         Transaction signedTransaction = user.sign(transaction);
 
