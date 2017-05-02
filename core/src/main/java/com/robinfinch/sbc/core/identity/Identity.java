@@ -1,9 +1,9 @@
 package com.robinfinch.sbc.core.identity;
 
-import com.robinfinch.sbc.core.Hash;
-import com.robinfinch.sbc.core.ledger.Transaction;
+import com.robinfinch.sbc.core.ledger.Entry;
 
 import java.security.*;
+import java.util.Objects;
 
 public class Identity {
 
@@ -24,24 +24,39 @@ public class Identity {
         return publicKey;
     }
 
-    public boolean hasSigned(Transaction transaction) {
+    public boolean hasSigned(Entry entry) {
 
         boolean result;
         try {
-            if (transaction.getSignature() == null) {
+            if (entry.getSignature() == null) {
                 result = false;
             } else {
-                Signature signature = Signature.getInstance(Transaction.SIGNING_ALGORITHM);
+                Signature signature = Signature.getInstance(Entry.SIGNING_ALGORITHM);
                 signature.initVerify(publicKey);
-                signature.update(transaction.getHeader());
-                for (Hash source : transaction.getSources()) {
-                    signature.update(source.value);
-                }
-                result = signature.verify(transaction.getSignature());
+                entry.update(signature);
+                result = signature.verify(entry.getSignature());
             }
         } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
             result = false;
         }
         return result;
+    }
+
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(userId)
+                + 3 * Objects.hashCode(publicKey);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o instanceof Identity) {
+            Identity that = (Identity) o;
+            return Objects.equals(this.userId, that.userId)
+                    && Objects.equals(this.publicKey, that.publicKey);
+        } else {
+            return false;
+        }
     }
 }

@@ -6,8 +6,8 @@ repositories {
     mavenCentral()
 }
 
-dependencies {	
-	compile project(':core')
+dependencies {
+    compile project(':core')
     compile 'com.squareup.retrofit2:retrofit:2.2.0'
     compile 'com.squareup.retrofit2:converter-gson:2.2.0'
     compile 'io.undertow:undertow-core:1.4.12.Final'

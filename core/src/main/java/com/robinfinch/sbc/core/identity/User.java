@@ -1,8 +1,7 @@
 package com.robinfinch.sbc.core.identity;
 
 import com.robinfinch.sbc.core.ConfigurationException;
-import com.robinfinch.sbc.core.Hash;
-import com.robinfinch.sbc.core.ledger.Transaction;
+import com.robinfinch.sbc.core.ledger.Entry;
 
 import java.security.*;
 
@@ -25,21 +24,18 @@ public class User {
         return new Identity(id, keyPair.getPublic());
     }
 
-    public Transaction sign(Transaction transaction) throws ConfigurationException {
+    public Entry sign(Entry entry) throws ConfigurationException {
 
         byte[] signed;
         try {
-            Signature signature = Signature.getInstance(Transaction.SIGNING_ALGORITHM);
+            Signature signature = Signature.getInstance(Entry.SIGNING_ALGORITHM);
             signature.initSign(keyPair.getPrivate());
-            signature.update(transaction.getHeader());
-            for (Hash source : transaction.getSources()) {
-                signature.update(source.value);
-            }
+            entry.update(signature);
             signed = signature.sign();
         } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
-            throw new ConfigurationException("Signing algorithm " + Transaction.SIGNING_ALGORITHM + " not supported", e);
+            throw new ConfigurationException("Signing algorithm " + Entry.SIGNING_ALGORITHM + " not supported", e);
         }
 
-        return new Transaction(transaction, signed);
+        return new Entry(entry, signed);
     }
 }

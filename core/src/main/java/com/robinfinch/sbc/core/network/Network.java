@@ -2,9 +2,8 @@ package com.robinfinch.sbc.core.network;
 
 import com.robinfinch.sbc.core.Hash;
 import com.robinfinch.sbc.core.identity.Identity;
-import com.robinfinch.sbc.core.ledger.AssetFactory;
 import com.robinfinch.sbc.core.ledger.Block;
-import com.robinfinch.sbc.core.ledger.Transaction;
+import com.robinfinch.sbc.core.ledger.Entry;
 
 public interface Network {
 
@@ -12,15 +11,11 @@ public interface Network {
 
     Identity requestIdentity(String userId);
 
-    IncentivePolicy getIncentivePolicy();
-
     void register(Node node);
 
     void deregister();
 
-    AssetFactory getAssetFactory();
-
-    void publish(Transaction transaction);
+    void publish(Entry entry);
 
     void publish(Block block);
 

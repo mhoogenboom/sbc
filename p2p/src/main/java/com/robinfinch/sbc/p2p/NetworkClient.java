@@ -4,19 +4,15 @@ import com.google.gson.Gson;
 import com.robinfinch.sbc.core.ConfigurationException;
 import com.robinfinch.sbc.core.Hash;
 import com.robinfinch.sbc.core.identity.Identity;
-import com.robinfinch.sbc.core.ledger.Asset;
-import com.robinfinch.sbc.core.ledger.AssetFactory;
 import com.robinfinch.sbc.core.ledger.Block;
-import com.robinfinch.sbc.core.ledger.Transaction;
-import com.robinfinch.sbc.core.network.IncentivePolicy;
+import com.robinfinch.sbc.core.ledger.Entry;
 import com.robinfinch.sbc.core.network.Network;
 import com.robinfinch.sbc.core.network.Node;
-import com.robinfinch.sbc.p2p.config.NetworkConfig;
 import com.robinfinch.sbc.p2p.identity.IdentityService;
 import com.robinfinch.sbc.p2p.identity.IdentityTo;
 import com.robinfinch.sbc.p2p.peer.BlockTo;
+import com.robinfinch.sbc.p2p.peer.EntryTo;
 import com.robinfinch.sbc.p2p.peer.Peer;
-import com.robinfinch.sbc.p2p.peer.TransactionTo;
 import io.undertow.Undertow;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Methods;
@@ -24,7 +20,9 @@ import retrofit2.Call;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
@@ -41,8 +39,6 @@ import static java.util.stream.Collectors.toList;
 
 public class NetworkClient implements Network {
 
-    private final NetworkConfig config;
-
     private final IdentityService identityService;
 
     private final List<Peer> peers;
@@ -55,18 +51,16 @@ public class NetworkClient implements Network {
 
     private Node node;
 
-    public NetworkClient(NetworkConfig config) {
-
-        this.config = config;
+    public static NetworkClient configure(NetworkConfig config) {
 
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(config.getIdentityServiceUrl())
                 .addConverterFactory(GsonConverterFactory.create())
                 .build();
 
-        identityService = retrofit.create(IdentityService.class);
+        IdentityService identityService = retrofit.create(IdentityService.class);
 
-        peers = new ArrayList<>();
+        List<Peer> peers = new ArrayList<>();
 
         for (String url : config.getPeerUrls()) {
 
@@ -79,10 +73,18 @@ public class NetworkClient implements Network {
             peers.add(peer);
         }
 
+        return new NetworkClient(identityService, peers, config);
+    }
+
+    NetworkClient(IdentityService identityService, List<Peer> peers, NetworkConfig config) {
+
+        this.identityService = identityService;
+        this.peers = peers;
+
         server = Undertow.builder()
                 .addHttpListener(config.getPort(), "localhost")
                 .setHandler(path()
-                        .addPrefixPath("/transaction", this::onTransactionRequest)
+                        .addPrefixPath("/transaction", this::onEntryRequest)
                         .addPrefixPath("/block", this::onBlockRequest))
                 .build();
 
@@ -126,11 +128,6 @@ public class NetworkClient implements Network {
     }
 
     @Override
-    public IncentivePolicy getIncentivePolicy() {
-        return config.getIncentivePolicy();
-    }
-
-    @Override
     public void register(Node node) {
 
         this.node = node;
@@ -151,21 +148,16 @@ public class NetworkClient implements Network {
     }
 
     @Override
-    public AssetFactory getAssetFactory() {
-        return config.getAssetFactory();
-    }
+    public void publish(Entry entry) {
 
-    @Override
-    public void publish(Transaction transaction) {
-
-        TransactionTo transactionTo = marshall(transaction);
+        EntryTo entryTo = marshall(entry);
 
         for (Peer peer : peers) {
             try {
-                Call<Void> call = peer.sendTransaction(transactionTo);
+                Call<Void> call = peer.sendEntry(entryTo);
                 call.execute();
 
-                logger.log(Level.INFO, "Send transaction {0} to {1}", new Object[]{transaction.getHash(), peer});
+                logger.log(Level.INFO, "Send transaction {0} to {1}", new Object[]{entry.getHash(), peer});
             } catch (IOException e) {
                 logger.log(Level.WARNING, "Failed to send transaction", e);
             }
@@ -194,7 +186,7 @@ public class NetworkClient implements Network {
 
         for (Peer peer : peers) {
             try {
-                Call<BlockTo> call = peer.requestBlock(Base64.getEncoder().encodeToString(hash.value));
+                Call<BlockTo> call = peer.requestBlock(Base64.getEncoder().encodeToString(hash.getValue()));
 
                 BlockTo blockTo = call.execute().body();
 
@@ -208,24 +200,24 @@ public class NetworkClient implements Network {
         return null;
     }
 
-    private void onTransactionRequest(HttpServerExchange exchange) {
+    private void onEntryRequest(HttpServerExchange exchange) {
 
         exchange.dispatch(() -> {
             exchange.startBlocking();
 
             InputStream in = exchange.getInputStream();
 
-            TransactionTo transactionTo = gson.fromJson(new InputStreamReader(in), TransactionTo.class);
+            EntryTo entryTo = gson.fromJson(new InputStreamReader(in), EntryTo.class);
 
             exchange.setStatusCode(HttpURLConnection.HTTP_OK)
                     .endExchange();
 
             try {
-                node.onTransactionPublished(unmarshall(transactionTo));
+                node.onEntryPublished(unmarshall(entryTo));
 
-                logger.log(Level.INFO, "Received transaction");
+                logger.log(Level.INFO, "Received entry");
             } catch (ConfigurationException e) {
-                logger.log(Level.WARNING, "Failed to receive transaction", e);
+                logger.log(Level.WARNING, "Failed to receive entry", e);
             }
         });
     }
@@ -297,14 +289,14 @@ public class NetworkClient implements Network {
 
     private BlockTo marshall(Block block) {
 
-        List<TransactionTo> transactions = block.getTransactions()
+        List<EntryTo> transactions = block.getEntries()
                 .stream()
                 .map(this::marshall)
                 .collect(toList());
 
         BlockTo blockTo = new BlockTo();
         if (block.getPreviousHash() != null) {
-            blockTo.setPreviousHash(Base64.getEncoder().encodeToString(block.getPreviousHash().value));
+            blockTo.setPreviousHash(Base64.getEncoder().encodeToString(block.getPreviousHash().getValue()));
         }
         blockTo.setUserId(block.getUserId());
         blockTo.setTimestamp(block.getTimestamp());
@@ -325,61 +317,36 @@ public class NetworkClient implements Network {
             blockBuilder.withPreviousHash(new Hash(Base64.getDecoder().decode(to.getPreviousHash())));
         }
 
-        for (TransactionTo transactionTo : to.getTransactions()) {
-            blockBuilder.withTransaction(unmarshall(transactionTo));
+        for (EntryTo entryTo : to.getTransactions()) {
+            blockBuilder.withTransaction(unmarshall(entryTo));
         }
 
         return blockBuilder.build();
     }
 
-    private TransactionTo marshall(Transaction transaction) {
+    private EntryTo marshall(Entry entry) {
 
-        List<String> sources = transaction.getSources()
-                .stream()
-                .map(h -> Base64.getEncoder().encodeToString(h.value))
-                .collect(toList());
+        EntryTo entryTo = new EntryTo();
+        entryTo.setTransaction(entry.getTransaction());
+        entryTo.setTimestamp(entry.getTimestamp());
+        entryTo.setSignature(Base64.getEncoder().encodeToString(entry.getSignature()));
 
-        String asset = getAssetFactory().marshall(transaction.getAsset());
-
-        TransactionTo transactionTo = new TransactionTo();
-        transactionTo.setFrom(transaction.getFrom());
-        transactionTo.setTo(transaction.getTo());
-        transactionTo.setAsset(asset);
-        transactionTo.setReference(transaction.getReference());
-        transactionTo.setFee(transaction.getFee());
-        transactionTo.setTimestamp(transaction.getTimestamp());
-        transactionTo.setSources(sources);
-        if (transaction.getSignature() != null) {
-            transactionTo.setSignature(Base64.getEncoder().encodeToString(transaction.getSignature()));
-        }
-
-        return transactionTo;
+        return entryTo;
     }
 
-    private Transaction unmarshall(TransactionTo transactionTo) throws ConfigurationException {
+    private Entry unmarshall(EntryTo entryTo) throws ConfigurationException {
 
-        Asset asset = getAssetFactory().unmarshall(transactionTo.getAsset());
+        Entry entry = new Entry.Builder()
+                .withTransaction(entryTo.getTransaction())
+                .withTimestamp(entryTo.getTimestamp())
+                .build();
 
-        Transaction.Builder transactionBuilder = new Transaction.Builder()
-                .withFrom(transactionTo.getFrom())
-                .withTo(transactionTo.getTo())
-                .withAsset(asset)
-                .withFee(transactionTo.getFee())
-                .withReference(transactionTo.getReference())
-                .withTimestamp(transactionTo.getTimestamp());
-
-        for (String source : transactionTo.getSources()) {
-            transactionBuilder.withSource(new Hash(Base64.getDecoder().decode(source)));
+        if (entryTo.getSignature() != null) {
+            entry = new Entry(entry,
+                    Base64.getDecoder().decode(entryTo.getSignature()));
         }
 
-        Transaction transaction = transactionBuilder.build();
-
-        if (transactionTo.getSignature() != null) {
-            transaction = new Transaction(transaction,
-                    Base64.getDecoder().decode(transactionTo.getSignature()));
-        }
-
-        return transaction;
+        return entry;
     }
 
     @Override

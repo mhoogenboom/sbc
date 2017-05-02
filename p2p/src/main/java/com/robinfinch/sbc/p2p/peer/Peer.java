@@ -9,11 +9,11 @@ import retrofit2.http.Path;
 public interface Peer {
 
     @POST("/transaction")
-    Call<Void> sendTransaction(@Body TransactionTo transaction);
+    Call<Void> sendEntry(@Body EntryTo transaction);
 
     @POST("/block")
     Call<Void> sendBlock(@Body BlockTo block);
 
     @GET("/block/{hash}")
-    Call<BlockTo> requestBlock(@Path(value="hash", encoded=true) String hash);
+    Call<BlockTo> requestBlock(@Path(value = "hash", encoded = true) String hash);
 }

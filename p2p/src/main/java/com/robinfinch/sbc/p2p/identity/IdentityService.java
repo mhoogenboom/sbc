@@ -12,5 +12,5 @@ public interface IdentityService {
     Call<Void> register(@Body IdentityTo identity);
 
     @GET("identity/{userId}")
-    Call<IdentityTo> requestIdentity(@Path(value="userId", encoded=true) String userId);
+    Call<IdentityTo> requestIdentity(@Path(value = "userId", encoded = true) String userId);
 }

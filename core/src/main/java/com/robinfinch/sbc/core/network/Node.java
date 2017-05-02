@@ -2,11 +2,11 @@ package com.robinfinch.sbc.core.network;
 
 import com.robinfinch.sbc.core.Hash;
 import com.robinfinch.sbc.core.ledger.Block;
-import com.robinfinch.sbc.core.ledger.Transaction;
+import com.robinfinch.sbc.core.ledger.Entry;
 
 public interface Node {
 
-    void onTransactionPublished(Transaction transaction);
+    void onEntryPublished(Entry entry);
 
     void onBlockPublished(Block block);
 

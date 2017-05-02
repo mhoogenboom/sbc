@@ -19,32 +19,31 @@ public class Block {
     private final String userId;
     private final long timestamp;
     private final String proofOfWork;
-    private final List<Transaction> transactions;
+    private final List<Entry> entries;
     private final Hash hash;
 
-    private Block(Hash previousHash, String userId, long timestamp, String proofOfWork, List<Transaction> transactions)
+    private Block(Hash previousHash, String userId, long timestamp, String proofOfWork, List<Entry> entries)
             throws ConfigurationException {
 
         this.previousHash = previousHash;
         this.userId = userId;
         this.timestamp = timestamp;
         this.proofOfWork = proofOfWork;
-        this.transactions = new ArrayList<>(transactions);
+        this.entries = new ArrayList<>(entries);
 
         try {
             MessageDigest digest = MessageDigest.getInstance(HASH_ALGORITHM);
             if (previousHash != null) {
-                digest.update(previousHash.value);
+                digest.update(previousHash.getValue());
             }
-            digest.update(getHeader());
-            for (Transaction transaction : getTransactions()) {
-                digest.update(transaction.getHash().value);
+            digest.update(getData());
+            for (Entry transaction : getEntries()) {
+                digest.update(transaction.getHash().getValue());
             }
             this.hash = new Hash(digest.digest());
         } catch (NoSuchAlgorithmException e) {
             throw new ConfigurationException("Required hash algorithm " + HASH_ALGORITHM + " not supported", e);
         }
-
     }
 
     public Hash getPreviousHash() {
@@ -63,7 +62,7 @@ public class Block {
         return proofOfWork;
     }
 
-    public byte[] getHeader() {
+    private byte[] getData() {
         return new StringBuilder()
                 .append(userId)
                 .append(':')
@@ -74,12 +73,23 @@ public class Block {
                 .getBytes(StandardCharsets.UTF_8);
     }
 
-    public List<Transaction> getTransactions() {
-        return transactions;
+    public List<Entry> getEntries() {
+        return entries;
     }
 
     public Hash getHash() {
         return hash;
+    }
+
+    public boolean hasCompulsoryValues() {
+        return isPresent(userId)
+                && (timestamp > 0L)
+                && isPresent(proofOfWork)
+                && !entries.isEmpty();
+    }
+
+    private boolean isPresent(String s) {
+        return (s != null) && !s.trim().isEmpty();
     }
 
     @Override
@@ -103,10 +113,10 @@ public class Block {
         private String userId;
         private long timestamp;
         private String proofOfWork;
-        private List<Transaction> transactions;
+        private List<Entry> entries;
 
         public Builder() {
-            transactions = new ArrayList<>();
+            entries = new ArrayList<>();
         }
 
         public Builder withPreviousHash(Hash previousHash) {
@@ -129,27 +139,23 @@ public class Block {
             return this;
         }
 
-        public Builder withFirstTransaction(Transaction transaction) {
-            transactions.add(0, transaction);
+        public Builder withFirstTransaction(Entry transaction) {
+            entries.add(0, transaction);
             return this;
         }
 
-        public Builder withTransaction(Transaction transaction) {
-            transactions.add(transaction);
+        public Builder withTransaction(Entry entry) {
+            entries.add(entry);
             return this;
         }
 
-        public Builder withoutTransactions(Predicate<Transaction> remove) {
-            transactions = transactions.stream().filter(remove.negate()).collect(Collectors.toList());
+        public Builder withoutTransactions(Predicate<Entry> remove) {
+            entries = entries.stream().filter(remove.negate()).collect(Collectors.toList());
             return this;
-        }
-
-        public int getTransactionCount() {
-            return transactions.size();
         }
 
         public Block build() throws ConfigurationException {
-            return new Block(previousHash, userId, timestamp, proofOfWork, transactions);
+            return new Block(previousHash, userId, timestamp, proofOfWork, entries);
         }
     }
 }

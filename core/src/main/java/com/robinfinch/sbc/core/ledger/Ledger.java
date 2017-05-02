@@ -3,7 +3,9 @@ package com.robinfinch.sbc.core.ledger;
 import com.robinfinch.sbc.core.Hash;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -45,48 +47,59 @@ public class Ledger {
         return new Ledger(this, block);
     }
 
-    public Optional<Transaction> findWithHash(Hash hash) {
+    public Optional<Entry> findWithHash(Hash hash) {
 
         return stream()
                 .build()
-                .flatMap(b -> b.getTransactions().stream())
-                .filter(t -> t.getHash().equals(hash))
+                .flatMap(block -> block.getEntries().stream())
+                .filter(entry -> entry.getHash().equals(hash))
                 .findAny();
     }
 
-    public Optional<Transaction> findWithReference(String from, Asset asset, String reference) {
+    public List<Entry> findSpend(String userId, Hash hash) {
 
-        return stream()
-                .build()
-                .flatMap(b -> b.getTransactions().stream())
-                .filter(t -> from.equals(t.getFrom())
-                        && t.getAsset().covers(asset)
-                        && reference.equals(t.getReference()))
-                .findAny();
+        return find(t -> t.getFrom().equals(userId) && t.hasSource(hash));
     }
 
-    public List<Transaction> findSpend(String userId, Hash hash) {
+    public List<Entry> findUnspent(String userId, int confirmationLevel) {
 
-        return stream()
+        // find entry received in confirmed blocks, but not spend in any block
+        return withoutNewestBlocks(confirmationLevel)
+                .stream()
                 .build()
-                .flatMap(b -> b.getTransactions().stream())
-                .filter(t -> userId.equals(t.getFrom())
-                        && t.getSources().contains(hash))
+                .flatMap(block -> block.getEntries().stream())
+                .filter(entry -> entry.getTransaction().hasValueFor(userId)
+                        && findSpend(userId, entry.getHash()).isEmpty())
+                .sorted((o1, o2) -> (int) (o1.getTimestamp() - o2.getTimestamp()))
                 .collect(Collectors.toList());
     }
 
-    public List<Transaction> findUnspent(String userId) {
+    public List<Entry> find(Predicate<Transaction> filter) {
 
         return stream()
                 .build()
-                .flatMap(b -> b.getTransactions().stream())
-                .filter(t -> t.hasValueFor(userId)
-                        && findSpend(userId, t.getHash()).isEmpty())
-                .sorted((o1, o2) -> (int) (o1.getTimestamp() - o2.getTimestamp()))
+                .flatMap(block -> block.getEntries().stream())
+                .filter(entry -> filter.test(entry.getTransaction()))
                 .collect(Collectors.toList());
     }
 
     Stream.Builder<Block> stream() {
         return chain.stream().add(endOfChain);
+    }
+
+    @Override
+    public int hashCode() {
+        return 2 * chain.hashCode() + endOfChain.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o instanceof Ledger) {
+            Ledger that = (Ledger) o;
+            return Objects.equals(this.chain, that.chain)
+                    && Objects.equals(this.endOfChain, that.endOfChain);
+        } else {
+            return false;
+        }
     }
 }

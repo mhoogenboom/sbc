@@ -20,11 +20,11 @@ public class Worker {
     }
 
     private String firstNonce() {
-        return "0";  // todo
+        return Integer.toString(0);
     }
 
     private String next(String nonce) {
-        return "" + (Integer.parseInt(nonce) + 1); // todo
+        return Integer.toString(Integer.parseInt(nonce) + 1);
     }
 
     public boolean check(Block block) {

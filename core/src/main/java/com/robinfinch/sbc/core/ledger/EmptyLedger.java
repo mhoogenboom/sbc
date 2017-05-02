@@ -33,4 +33,9 @@ public class EmptyLedger extends Ledger {
     Stream.Builder<Block> stream() {
         return Stream.builder();
     }
+
+    @Override
+    public int hashCode() {
+        return 0;
+    }
 }

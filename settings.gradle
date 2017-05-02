@@ -1,6 +1,7 @@
 include 'core'
+include 'domain'
 include 'p2p'
-include 'transactor'
-include 'aggregator'
 include 'simulation'
 include 'testdata'
+
+

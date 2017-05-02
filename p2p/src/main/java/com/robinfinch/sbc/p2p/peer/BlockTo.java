@@ -8,7 +8,7 @@ public class BlockTo {
     private String userId;
     private long timestamp;
     private String proofOfWork;
-    private List<TransactionTo> transactions;
+    private List<EntryTo> transactions;
 
     public String getPreviousHash() {
         return previousHash;
@@ -42,11 +42,11 @@ public class BlockTo {
         this.proofOfWork = proofOfWork;
     }
 
-    public List<TransactionTo> getTransactions() {
+    public List<EntryTo> getTransactions() {
         return transactions;
     }
 
-    public void setTransactions(List<TransactionTo> transactions) {
+    public void setTransactions(List<EntryTo> transactions) {
         this.transactions = transactions;
     }
 }

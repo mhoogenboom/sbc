@@ -8,5 +8,6 @@ repositories {
 
 dependencies {
     compile project(':core')
-    compile project(':p2p')
+    compile group: 'junit', name: 'junit', version: '4.11'
+    compile group: 'org.mockito', name: 'mockito-all', version: '1.10.19'
 }

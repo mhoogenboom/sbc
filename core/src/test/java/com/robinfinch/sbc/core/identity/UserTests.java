@@ -1,23 +1,23 @@
 package com.robinfinch.sbc.core.identity;
 
-import com.robinfinch.sbc.core.ledger.Transaction;
-import com.robinfinch.sbc.testdata.Tests;
+import com.robinfinch.sbc.testdata.TestData;
 import org.junit.Test;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
-public class UserTests extends Tests {
+public class UserTests extends TestData {
 
     @Test
-    public void bobSignsTransaction() throws Exception {
+    public void bobSignsEntry() throws Exception {
 
-        User user = createBob();
+//        System.out.println("entry 1 signature = " + Arrays.toString(alice.sign(entry1).getSignature()));
+//        System.out.println("entry 2 signature = " + Arrays.toString(bob.sign(entry2).getSignature()));
+//        System.out.println("entry 4 signature = " + Arrays.toString(alice.sign(entry4).getSignature()));
+//        System.out.println("entry 5 signature = " + Arrays.toString(bob.sign(entry5).getSignature()));
 
-        assertEquals("bob", user.getId());
+        assertEquals("bob", bob.getId());
 
-        Transaction transaction = createTransaction13();
-
-        assertArrayEquals(T13_SIGNATURE, user.sign(transaction).getSignature());
+        assertArrayEquals(ENTRY2_SIGNATURE, bob.sign(entry2).getSignature());
     }
 }
